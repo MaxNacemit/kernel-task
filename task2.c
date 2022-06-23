@@ -169,8 +169,8 @@ static int my_write(struct file *file, char __user *user_buffer, size_t size, lo
                 }
             }
         }
+        return bytes_written;
     }
-    return bytes_written;
 }
 
 static long my_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
