@@ -129,7 +129,7 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     if (size_to_copy <= 0) {
         return 0;
     }
-    if (copy_from_user(user_buffer, buffer_address + *offset, size_to_copy)) {
+    if (copy_from_user(buffer_address + *offset, user_buffer, size_to_copy)) {
         return -EFAULT;
     }
     mutex_lock(&counter_mutex);
@@ -150,7 +150,7 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
             if (size - bytes_written < size_to_copy) {
                 size_to_copy = size - bytes_written;
             }
-            if (copy_from_user(user_buffer, buffer_address + *offset, size_to_copy)) {
+            if (copy_from_user(buffer_address + *offset, user_buffer, size_to_copy)) {
                 return -EFAULT;
             }
             mutex_lock(&counter_mutex);
