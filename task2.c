@@ -13,7 +13,7 @@
 #define BLOCKING 0
 #define NONBLOCKING 1
 
-MODULE_LICENSE("GPLv3");
+MODULE_LICENSE("Dual BSD/GPL");
 
 static int bufsize = 1024;
 module_param(bufsize, int, 0660);
