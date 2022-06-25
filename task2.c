@@ -62,12 +62,13 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
     lastread.pid = current->pid;
     lastread.owner = current->uid;
     mutex_unlock(&counter_mutex);
-    ssize_t size_to_copy = min(size, bufsize - *offset - 1);
+    ssize_t size_to_copy;
+    size_to_copy = min(size, bufsize - *offset - 1);
     size_to_copy = min(size_to_copy, bytes_unread);
     if (size_to_copy <= 0) {
         return 0;
     }
-    if (copy_to_user(user_buffer, buffer_address + *offset, len)) {
+    if (copy_to_user(user_buffer, buffer_address + *offset, size_to_copy)) {
         return -EFAULT;
     }
     mutex_lock(&counter_mutex);
@@ -112,11 +113,12 @@ static ssize_t my_write(struct file *file, char __user *user_buffer, size_t size
     lastwrite.pid = current->pid;
     lastwrite.owner = current->uid;
     mutex_unlock(&counter_mutex);
-    ssize_t size_to_copy = min(size, bufsize - *offset - 1);
+    ssize_t size_to_copy;
+    size_to_copy = min(size, bufsize - *offset - 1);
     if (size_to_copy <= 0) {
         return 0;
     }
-    if (copy_to_user(user_buffer, buffer_address + *offset, len)) {
+    if (copy_to_user(user_buffer, buffer_address + *offset, size_to_copy)) {
         return -EFAULT;
     }
     mutex_lock(&counter_mutex);
@@ -205,7 +207,7 @@ const struct file_operations my_fops = {
     .unlocked_ioctl = my_ioctl
 };
 
-int init_module(void) {
+static int my_init(void) {
     int err;
     err = register_chrdev_region(MKDEV(MY_MAJOR, 0), 1, "my_device_driver");
     if (err != 0) {
@@ -221,11 +223,11 @@ int init_module(void) {
     return 0;
 }
 
-void cleanup_module(void) {
+static void my_cleanup(void) {
     vfree(buffer_address);
     cdev_del(&device.cdev);
     unregister_chrdev_region(MKDEV(MY_MAJOR, 0), 1);
 }
 
-module_init(init_module);
-module_exit(cleanup_module);
+module_init(my_init);
+module_exit(my_cleanup);
