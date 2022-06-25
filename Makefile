@@ -1,7 +1,7 @@
 KDIR ?= /lib/modules/$$(uname -r)/build
 
 default:
-    make -C $(KDIR) M=$(PWD) modules
+    make -C $(KDIR) M=$(CURDIR) modules
 
 clean:
-    make -C $(KDIR) M=$(BUILD_DIR) src=$(PWD) clean
+    make -C $(KDIR) M=$(CURDIR) clean
