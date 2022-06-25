@@ -64,7 +64,7 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
     mutex_lock(&counter_mutex);
     lastread.timestamp = ktime_get_real_ns();
     lastread.pid = current->pid;
-    lastread.owner = current->uid;
+    lastread.owner = current_uid();
     mutex_unlock(&counter_mutex);
     if (bytes_unread < size_to_copy) {
         size_to_copy = bytes_unread; 
@@ -124,12 +124,12 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     mutex_lock(&counter_mutex);
     lastwrite.timestamp = ktime_get_real_ns();
     lastwrite.pid = current->pid;
-    lastwrite.owner = current->uid;
+    lastwrite.owner = current_uid();
     mutex_unlock(&counter_mutex);
     if (size_to_copy <= 0) {
         return 0;
     }
-    if (copy_to_user(user_buffer, buffer_address + *offset, size_to_copy)) {
+    if (copy_from_user(user_buffer, buffer_address + *offset, size_to_copy)) {
         return -EFAULT;
     }
     mutex_lock(&counter_mutex);
@@ -150,7 +150,7 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
             if (size - bytes_written < size_to_copy) {
                 size_to_copy = size - bytes_written;
             }
-            if (copy_to_user(user_buffer, buffer_address + *offset, size_to_copy)) {
+            if (copy_from_user(user_buffer, buffer_address + *offset, size_to_copy)) {
                 return -EFAULT;
             }
             mutex_lock(&counter_mutex);
