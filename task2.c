@@ -56,7 +56,7 @@ static int my_release(struct inode *inode, struct file *file) {
     return 0;
 }
 
-static ssize_t my_read(struct file *file, const char __user *user_buffer, size_t size, loff_t *offset) {
+static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
     ssize_t size_to_copy = bufsize - *offset - 1;
     if (size < size_to_copy) {
         size_to_copy = size;
