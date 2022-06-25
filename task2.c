@@ -56,11 +56,11 @@ static int my_release(struct inode *inode, struct file *file) {
     return 0;
 }
 
-static int my_read(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
+static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
     mutex_lock(&counter_mutex);
     lastread.timestamp = ktime_get_real_ns();
     lastread.pid = current->pid;
-    lastread.owner = current->owner;
+    lastread.owner = current->uid;
     mutex_unlock(&counter_mutex);
     ssize_t size_to_copy = min(size, bufsize - *offset - 1);
     size_to_copy = min(size_to_copy, bytes_unread);
@@ -106,11 +106,11 @@ static int my_read(struct file *file, char __user *user_buffer, size_t size, lof
     }
 }
 
-static int my_write(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
+static ssize_t my_write(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
     mutex_lock(&counter_mutex);
     lastwrite.timestamp = ktime_get_real_ns();
     lastwrite.pid = current->pid;
-    lastwrite.owner = current->owner;
+    lastwrite.owner = current->uid;
     mutex_unlock(&counter_mutex);
     ssize_t size_to_copy = min(size, bufsize - *offset - 1);
     if (size_to_copy <= 0) {
