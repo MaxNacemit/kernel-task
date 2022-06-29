@@ -49,9 +49,6 @@ int main() {
         if (ioctl(fd, _IO(42, 0), NULL) != 0) {
             printf("IOCTL commands don't form from macros\n");
         }
-        if (read(fd, buf, 6) != 1) {
-            printf("non-blocking mode doesn't work as intended");
-        }
         exit(0);
     }
 }

@@ -59,20 +59,27 @@ static int my_release(struct inode *inode, struct file *file) {
 }
 
 static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
-    ssize_t size_to_copy = bufsize - *offset - 1;
+    ssize_t size_to_copy = bufsize - *offset;
     if (size < size_to_copy) {
         size_to_copy = size;
     }
+    u64 time = ktime_get_real_ns()
     mutex_lock(&counter_mutex);
-    lastread.timestamp = ktime_get_real_ns();
+    lastread.timestamp = time;
     lastread.pid = current->pid;
     lastread.owner = current_uid();
     mutex_unlock(&counter_mutex);
+    if (bytes_unread == 0 && mode == NONBLOCKING) {
+        return 0;
+    }
+    while (bytes_unread == 0) {
+        time = ktime_get_real_ns();
+    }
+    mutex_lock(&counter_mutex);
+    lastread.timestamp = time;
+    mutex_unlock(&counter_mutex);
     if (bytes_unread < size_to_copy) {
         size_to_copy = bytes_unread; 
-    }
-    if (size_to_copy <= 0) {
-        return 0;
     }
     if (copy_to_user(user_buffer, buffer_address + *offset, size_to_copy)) {
         return -EFAULT;
@@ -83,54 +90,38 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
     }
     mutex_unlock(&counter_mutex);
     *offset += size_to_copy;
-    if (*offset == bufsize - 1) {
+    if (*offset == bufsize) {
         *offset = 0;
     }
-    if (mode == NONBLOCKING) {
-        return size_to_copy;
-    } else {
-        ssize_t bytes_read = size_to_copy;
-        while (bytes_read < size && bytes_unread != -1) {
-            if (bytes_unread > 0) {
-                size_to_copy = bufsize - *offset - 1;
-                if (size - bytes_read < size_to_copy) {
-                    size_to_copy = size - bytes_read;
-                }
-                if (bytes_unread < size_to_copy) {
-                    size_to_copy = bytes_unread;
-                }
-                if (copy_to_user(user_buffer, buffer_address + *offset, size_to_copy)) {
-                    return -EFAULT;
-                }
-                mutex_lock(&counter_mutex);
-                if (bytes_unread != -1) {
-                    bytes_unread -= size_to_copy;
-                }
-                mutex_unlock(&counter_mutex);
-                *offset += size_to_copy;
-                bytes_read += size_to_copy;
-                if (*offset == bufsize - 1) {
-                    *offset = 0;
-                }
-            }
-        }
-        return bytes_read;
-    }
+    return size_to_copy;
 }
 
 static ssize_t my_write(struct file *file, const char __user *user_buffer, size_t size, loff_t *offset) {
-    ssize_t size_to_copy = bufsize - *offset - 1;
+    ssize_t size_to_copy = bufsize - *offset;
     if (size < size_to_copy) {
         size_to_copy = size;
     }
+    u64 time = ktime_get_real_ns();
     mutex_lock(&counter_mutex);
-    lastwrite.timestamp = ktime_get_real_ns();
+    lastwrite.timestamp = time;
     lastwrite.pid = current->pid;
     lastwrite.owner = current_uid();
     mutex_unlock(&counter_mutex);
-    if (size_to_copy <= 0) {
+    if (bufsize - *offset == 0 && mode == NONBLOCKING) {
         return 0;
     }
+    while (bufsize - *offset == 0 && bytes_unread != 0) {
+        time = ktime_get_real_ns();
+    }
+    if (bufsize - *offset == 0) {
+        *offset = 0;
+    }
+    if (bufsize - *offset < size) {
+        size_to_copy = bufsize - *offset;
+    }
+    mutex_lock(&counter_mutex);
+    lastwrite.timestamp = time;
+    mutex_unlock(&counter_mutex);
     if (copy_from_user(buffer_address + *offset, user_buffer, size_to_copy)) {
         return -EFAULT;
     }
@@ -140,36 +131,10 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     }
     mutex_unlock(&counter_mutex);
     *offset += size_to_copy;
-    if (*offset == bufsize - 1) {
+    if (*offset == bufsize && bytes_unread == 0) {
         *offset = 0;
     }
-    if (mode == NONBLOCKING) {
-        return size_to_copy;
-    } else {
-        ssize_t bytes_written = size_to_copy;
-        while (bytes_written < size && bytes_unread != -1) {
-            size_to_copy = bufsize - *offset - 1;
-            if (size - bytes_written < size_to_copy) {
-                size_to_copy = size - bytes_written;
-            }
-            if (copy_from_user(buffer_address + *offset, user_buffer, size_to_copy)) {
-                return -EFAULT;
-            }
-            mutex_lock(&counter_mutex);
-            if (bytes_unread != -1) {
-                bytes_unread += size_to_copy;
-            }
-            mutex_unlock(&counter_mutex);
-            *offset += size_to_copy;
-            bytes_written += size_to_copy;
-            if (*offset == bufsize - 1) {
-                if (bytes_unread == 0) {
-                    *offset = 0;
-                }
-            }
-        }
-        return bytes_written;
-    }
+    return size_to_copy;
 }
 
 static long my_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
