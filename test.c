@@ -28,7 +28,9 @@ int main() {
     } else {
         int fd = open("/dev/my_device_driver", O_RDONLY);
         char buf[] = "mnklgh";
-        read(fd, buf, 6);
+        if (read(fd, buf, 6) != 6) {
+            printf("Something went wrong: read\n");
+        }
         printf("%s\n", buf);
         char buf2[4096];
         char readbuf[4096];
@@ -38,6 +40,7 @@ int main() {
         buf2[4095] = 0;
         readbuf[4095] = 0;
         if (read(fd, readbuf, 4095) != 4095) {
+            printf("Something went wrong: read");
             return 1;
         }
         if (readbuf != buf2) {
