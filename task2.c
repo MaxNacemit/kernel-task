@@ -60,10 +60,10 @@ static int my_release(struct inode *inode, struct file *file) {
 
 static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
     ssize_t size_to_copy = bufsize - *offset;
+    u64 time = ktime_get_real_ns();
     if (size < size_to_copy) {
         size_to_copy = size;
     }
-    u64 time = ktime_get_real_ns()
     mutex_lock(&counter_mutex);
     lastread.timestamp = time;
     lastread.pid = current->pid;
@@ -98,10 +98,10 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
 
 static ssize_t my_write(struct file *file, const char __user *user_buffer, size_t size, loff_t *offset) {
     ssize_t size_to_copy = bufsize - *offset;
+    u64 time = ktime_get_real_ns();
     if (size < size_to_copy) {
         size_to_copy = size;
     }
-    u64 time = ktime_get_real_ns();
     mutex_lock(&counter_mutex);
     lastwrite.timestamp = time;
     lastwrite.pid = current->pid;
