@@ -8,7 +8,7 @@
 int main() {
     pid_t pid = fork();
     if (pid == 0) {
-        int fd = open("/dev/my_device_driver", "w");
+        int fd = open("/dev/my_device_driver", O_WRONLY);
         char buf[] = "abcdef";
         if (write(fd, buf, 6) != 6) {
             exit(1);
@@ -26,7 +26,7 @@ int main() {
         }
         exit(0);
     } else {
-        int fd = open("/dev/my_device_driver", "r");
+        int fd = open("/dev/my_device_driver", O_RDONLY);
         char buf[] = "mnklgh";
         read(fd, buf, 6);
         printf("%s\n", buf);
