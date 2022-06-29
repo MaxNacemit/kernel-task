@@ -223,6 +223,11 @@ const struct file_operations my_fops = {
     .unlocked_ioctl = my_ioctl
 };
 
+static int mychardev_uevent(struct device *dev, struct kobj_uevent_env *env) {
+    add_uevent_var(env, "DEVMODE=%#o", 0666);
+    return 0;
+}
+
 static int my_init(void) {
     int err;
     err = register_chrdev_region(MKDEV(MY_MAJOR, 0), 1, "my_device_driver");
@@ -230,6 +235,7 @@ static int my_init(void) {
         return err;
     }
     myclass = class_create(THIS_MODULE, "mydev");
+    myclass->dev_uevent = mychardev_uevent;
     cdev_init(&device.cdev, &my_fops);
     cdev_add(&device.cdev, MKDEV(MY_MAJOR, 0), 1);
     device_create(myclass, NULL, MKDEV(MY_MAJOR, 0), NULL, "mychardev-0");
