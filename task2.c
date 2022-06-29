@@ -38,6 +38,8 @@ struct my_device_data {
 
 struct my_device_data device;
 
+static struct class *myclass;
+
 static int my_open(struct inode *inode, struct file *file) {
     struct my_device_data *my_data =
              container_of(inode->i_cdev, struct my_device_data, cdev);
@@ -227,8 +229,10 @@ static int my_init(void) {
     if (err != 0) {
         return err;
     }
+    myclass = class_create(THIS_MODULE, "mydev");
     cdev_init(&device.cdev, &my_fops);
     cdev_add(&device.cdev, MKDEV(MY_MAJOR, 0), 1);
+    device_create(myclass, NULL, MKDEV(MY_MAJOR, 0), NULL, "mychardev-0");
     buffer_address = vmalloc(bufsize);
     if (!buffer_address) {
         return 1;
@@ -239,7 +243,9 @@ static int my_init(void) {
 
 static void my_cleanup(void) {
     vfree(buffer_address);
-    cdev_del(&device.cdev);
+    device_destroy(myclass, MKDEV(MY_MAJOR, 0));
+    class_unregister(myclass);
+    class_destroy(myclass);
     unregister_chrdev_region(MKDEV(MY_MAJOR, 0), 1);
 }
 
