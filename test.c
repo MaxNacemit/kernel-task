@@ -45,6 +45,8 @@ int main() {
         }
         read(fd, buf, 2);
         printf("Non-blocking mode works as intended\n");
-        exit(0);
+        int status;
+        waitpid(pid, &status, 0);
+        exit(WEXITSTATUS(status));
     }
 }
