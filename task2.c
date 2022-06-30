@@ -50,6 +50,12 @@ static int my_open(struct inode *inode, struct file *file) {
         return 0;
     }
     file->private_data = my_data;
+    int res;
+    if (file->f_mode == FMODE_READ && bytes_unread == 0) {
+        if ((res = down_interruptible(&zero_sema)) < 0) {
+            return res; 
+        }
+    }
     return 0;
 }
 
