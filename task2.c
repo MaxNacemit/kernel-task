@@ -74,7 +74,7 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
     }
     if (bytes_unread == 0) {
         int res;
-        if ((res = down_killable(&zero_sema)) < 0) {
+        if ((res = down_interruptible(&zero_sema)) < 0) {
             return res; 
         }
     }
@@ -90,7 +90,7 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
     }
     if (bytes_unread == 0) {
         int res;
-        if ((res = down_killable(&zero_sema)) < 0) {
+        if ((res = down_interruptible(&zero_sema)) < 0) {
             return res; 
         }
         up(&buffull_sema);
@@ -119,7 +119,7 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     }
     if (bufsize - *offset == 0) {
         int res;
-        if ((res = down_killable(&buffull_sema)) < 0) {
+        if ((res = down_interruptible(&buffull_sema)) < 0) {
             return res;
         }
         *offset = 0;
@@ -146,7 +146,7 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
         up(&buffull_sema);
     } else if (*offset == bufsize) {
         int res;
-        if ((res = down_killable(&buffull_sema)) < 0) {
+        if ((res = down_interruptible(&buffull_sema)) < 0) {
             return res;
         }
     }
