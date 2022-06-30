@@ -21,7 +21,7 @@ int main() {
         if (write(fd, buf2, 4095) < 0) {
             exit(1);
         }
-        if (write(fd, buf, 6) < 0) {
+        if (write(fd, buf2, 6) < 0) {
             exit(1);
         }
         exit(0);
@@ -32,23 +32,19 @@ int main() {
             printf("Something went wrong: read\n");
         }
         printf("%s\n", buf);
-        char buf2[4096];
-        char readbuf[4096];
-        for (int i = 0; i < 4095; ++i) {
-            buf2[i] = '0';
+        char buf2[1024];
+        if (read(fd, buf2, 4095) < 0) {
+            printf("Something went wrong: read going over buffer size\n");
         }
-        buf2[4095] = 0;
-        readbuf[4095] = 0;
-        if (read(fd, readbuf, 4095) != 4095) {
-            printf("Something went wrong: read");
-            return 1;
+        if (read(fd, buf, 6) < 0) {
+            printf("Something went wrong: read going over buffer size\n");
         }
-        if (readbuf != buf2) {
-            printf("Something went wrong: blocking mode.\n");
-        }
+        printf("%s\n", buf);
         if (ioctl(fd, _IO(42, 0), NULL) != 0) {
             printf("IOCTL commands don't form from macros\n");
         }
+        read(fd, buf, 2);
+        printf("Non-blocking mode works as intended\n");
         exit(0);
     }
 }

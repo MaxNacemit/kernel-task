@@ -9,6 +9,7 @@
 #include <linux/kernel.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>
+#include <linux/semaphore.h>
 #define MY_MAJOR 42
 #define BLOCKING 0
 #define NONBLOCKING 1
@@ -22,6 +23,8 @@ static char *buffer_address = NULL;
 int mode = BLOCKING;
 struct mutex counter_mutex;
 int bytes_unread = 0;
+struct semaphore zero_sema;
+struct semaphore buffull_sema;
 
 struct operation_info {
     uint64_t timestamp;
@@ -72,12 +75,12 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
     if (bytes_unread == 0 && mode == NONBLOCKING) {
         return 0;
     }
-    while (bytes_unread == 0) {
-        time = ktime_get_real_ns();
+    if (bytes_unread == 0) {
+        int res;
+        if ((res = down_killable(&zero_sema)) < 0) {
+            return res; 
+        }
     }
-    mutex_lock(&counter_mutex);
-    lastread.timestamp = time;
-    mutex_unlock(&counter_mutex);
     if (bytes_unread < size_to_copy) {
         size_to_copy = bytes_unread; 
     }
@@ -87,6 +90,13 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
     mutex_lock(&counter_mutex);
     if (bytes_unread != -1) {
         bytes_unread -= size_to_copy;
+    }
+    if (bytes_unread == 0) {
+        int res;
+        if ((res = down_killable(&zero_sema)) < 0) {
+            return res; 
+        }
+        up(&buffull_sema);
     }
     mutex_unlock(&counter_mutex);
     *offset += size_to_copy;
@@ -110,11 +120,13 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     if (bufsize - *offset == 0 && mode == NONBLOCKING) {
         return 0;
     }
-    while (bufsize - *offset == 0 && bytes_unread != 0) {
-        time = ktime_get_real_ns();
-    }
     if (bufsize - *offset == 0) {
+        int res;
+        if ((res = down_killable(&buffull_sema)) < 0) {
+            return res;
+        }
         *offset = 0;
+        up(&buffull_sema);
     }
     if (bufsize - *offset < size) {
         size_to_copy = bufsize - *offset;
@@ -128,11 +140,16 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     mutex_lock(&counter_mutex);
     if (bytes_unread != -1) {
         bytes_unread += size_to_copy;
+        up(&zero_sema);
     }
     mutex_unlock(&counter_mutex);
     *offset += size_to_copy;
     if (*offset == bufsize && bytes_unread == 0) {
         *offset = 0;
+    } else if (*offset == bufsize) {
+        if ((res = down_killable(&buffull_sema)) < 0) {
+            return res;
+        }
     }
     return size_to_copy;
 }
@@ -209,6 +226,8 @@ static int my_init(void) {
         return 1;
     }
     mutex_init(&counter_mutex);
+    sema_init(&zero_sema, 1);
+    sema_init(&buffull_sema, 1);
     return 0;
 }
 
