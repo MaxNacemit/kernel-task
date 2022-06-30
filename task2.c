@@ -83,6 +83,7 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
         if ((res = down_interruptible(&zero_sema)) < 0) {
             return res; 
         }
+        up(&zero_sema);
     }
     if (bytes_unread < size_to_copy) {
         size_to_copy = bytes_unread; 
@@ -110,11 +111,8 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
 }
 
 static ssize_t my_write(struct file *file, const char __user *user_buffer, size_t size, loff_t *offset) {
-    ssize_t size_to_copy = bufsize - *offset;
+    ssize_t size_to_copy = size;
     u64 time = ktime_get_real_ns();
-    if (size < size_to_copy) {
-        size_to_copy = size;
-    }
     mutex_lock(&counter_mutex);
     lastwrite.timestamp = time;
     lastwrite.pid = current->pid;
@@ -134,9 +132,6 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     if (bufsize - *offset < size) {
         size_to_copy = bufsize - *offset;
     }
-    mutex_lock(&counter_mutex);
-    lastwrite.timestamp = time;
-    mutex_unlock(&counter_mutex);
     if (copy_from_user(buffer_address + *offset, user_buffer, size_to_copy)) {
         return -EFAULT;
     }
