@@ -54,9 +54,6 @@ static int my_open(struct inode *inode, struct file *file) {
 }
 
 static int my_release(struct inode *inode, struct file *file) {
-    mutex_lock(&counter_mutex);
-    bytes_unread = -1;
-    mutex_unlock(&counter_mutex);
     file->private_data = NULL;
     return 0;
 }
@@ -137,15 +134,16 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     if (copy_from_user(buffer_address + *offset, user_buffer, size_to_copy)) {
         return -EFAULT;
     }
+    up(&zero_sema);
     mutex_lock(&counter_mutex);
     if (bytes_unread != -1) {
         bytes_unread += size_to_copy;
-        up(&zero_sema);
     }
     mutex_unlock(&counter_mutex);
     *offset += size_to_copy;
     if (*offset == bufsize && bytes_unread == 0) {
         *offset = 0;
+        up(&buffull_sema);
     } else if (*offset == bufsize) {
         int res;
         if ((res = down_killable(&buffull_sema)) < 0) {
