@@ -1,4 +1,6 @@
 KDIR ?= /lib/modules/$$(uname -r)/build
+bj-m += task2.o
+
 
 default:
 	make -C $(KDIR) M=$(CURDIR) modules
