@@ -147,6 +147,7 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     if (*offset == bufsize && bytes_unread == 0) {
         *offset = 0;
     } else if (*offset == bufsize) {
+        int res;
         if ((res = down_killable(&buffull_sema)) < 0) {
             return res;
         }
