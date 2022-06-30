@@ -45,6 +45,9 @@ int main() {
         }
         read(fd, buf, 2);
         printf("Non-blocking mode works as intended\n");
+        if (ioctl(fd, _IO(42, 0), NULL) != 0) {
+            printf("Something went wrong: IOCTL");
+        }
         int status;
         waitpid(pid, &status, 0);
         exit(WEXITSTATUS(status));
