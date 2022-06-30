@@ -1,5 +1,5 @@
 KDIR ?= /lib/modules/$$(uname -r)/build
-bj-m += task2.o
+obj-m += task2.o
 
 
 default:

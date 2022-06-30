@@ -60,6 +60,12 @@ static int my_open(struct inode *inode, struct file *file) {
 }
 
 static int my_release(struct inode *inode, struct file *file) {
+    if (file->f_mode & FMODE_READ) {
+        up(&zero_sema);
+        mutex_lock(&counter_mutex);
+        bytes_unread = 0;
+        mutex_unlock(&counter_mutex);
+    }
     file->private_data = NULL;
     return 0;
 }
@@ -99,11 +105,11 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
         if ((res = down_interruptible(&zero_sema)) < 0) {
             return res; 
         }
-        up(&buffull_sema);
     }
     *offset += size_to_copy;
     if (*offset == bufsize) {
         *offset = 0;
+        up(&buffull_sema);
     }
     return size_to_copy;
 }
@@ -144,7 +150,6 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     *offset += size_to_copy;
     if (*offset == bufsize && bytes_unread == 0) {
         *offset = 0;
-        up(&buffull_sema);
     } else if (*offset == bufsize) {
         int res;
         if ((res = down_interruptible(&buffull_sema)) < 0) {
