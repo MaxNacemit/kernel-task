@@ -92,9 +92,8 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
         return -EFAULT;
     }
     mutex_lock(&counter_mutex);
-    if (bytes_unread != -1) {
-        bytes_unread -= size_to_copy;
-    }
+    bytes_unread -= size_to_copy;
+    mutex_unlock(&counter_mutex);
     if (bytes_unread == 0) {
         int res;
         if ((res = down_interruptible(&zero_sema)) < 0) {
@@ -102,7 +101,6 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
         }
         up(&buffull_sema);
     }
-    mutex_unlock(&counter_mutex);
     *offset += size_to_copy;
     if (*offset == bufsize) {
         *offset = 0;
@@ -135,12 +133,14 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     if (copy_from_user(buffer_address + *offset, user_buffer, size_to_copy)) {
         return -EFAULT;
     }
-    up(&zero_sema);
     mutex_lock(&counter_mutex);
     if (bytes_unread != -1) {
         bytes_unread += size_to_copy;
     }
     mutex_unlock(&counter_mutex);
+    if (bytes_unread == size_to_copy) {
+        up(&zero_sema);
+    }
     *offset += size_to_copy;
     if (*offset == bufsize && bytes_unread == 0) {
         *offset = 0;
