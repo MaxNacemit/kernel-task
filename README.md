@@ -25,13 +25,13 @@ This call has a blocking mode and a non-blocking mode. In both modes, it tries t
 - number of bytes to read passed as an argument
 - number of bytes until the end of the buffer
 - number of bytes unread stored in a global variable
-After that, it updates the counter of bytes unread and checks for mode. In non-blocking mode, the call returns the number of bytes unread immediately. In blocking mode, it checks whether the number of bytes passed as an argument had been read or the writer stopped working(indicated by the bytes_unread counter being set to -1). If this is the case, the call returns the number of bytes read. Otherwise, it attempts to read as much bytes as it can like a new non-blocking call would until the total number of bytes read is equal to the size argument of the call or the writer stops working.
+In non-blocking mode, if this value is zero, it returns zero immediately. In non-blocking mode, it waits data appears in the buffer and then returns the number of bytes read.
 
 # Write
-This call also has a blocking mode and a non-blocking mode. In non-blocking mode and on each iteration of the blocking mode(which stops if the reader stops working or the number of bytes written is equal to size) it attempts to write the number of bytes equal to the minimum of:
-- number of bytes to write passed as an argument
-- number of bytes until the end of the buffer
-Also, in blocking mode, the call doesn't set the buffer offset to 0 until all data in the buffer is read. The write call also updates the bytes_unread counter.
+This call also has a blocking mode and a non-blocking mode. In both modes, it attempts to write a number of bytes to the buffer equal to the minimum of:
+- the number of bytes left in the buffer
+- the number of bytes passed as an argument
+In non-blocking mode, if this is zero, it returns zero immediately. In blocking mode, the call waits until all data passed to the buffer before has been read and writes the data from the beginning of the buffer.
 
 # IOCTL
 This call has several commands implemented.
