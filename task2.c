@@ -21,6 +21,8 @@ module_param(bufsize, int, 0660);
 
 static char *buffer_address = NULL;
 int mode = BLOCKING;
+int read_pos = 0;
+int write_pos = 0;
 struct mutex counter_mutex;
 int bytes_unread = 0;
 struct semaphore zero_sema;
@@ -71,6 +73,7 @@ static int my_release(struct inode *inode, struct file *file) {
 }
 
 static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size, loff_t *offset) {
+    *offset = read_pos;
     ssize_t size_to_copy = bufsize - *offset;
     u64 time = ktime_get_real_ns();
     if (size < size_to_copy) {
@@ -98,6 +101,7 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
         return -EFAULT;
     }
     mutex_lock(&counter_mutex);
+    read_pos += size_to_copy;
     bytes_unread -= size_to_copy;
     mutex_unlock(&counter_mutex);
     if (bytes_unread == 0) {
@@ -106,15 +110,17 @@ static ssize_t my_read(struct file *file, char __user *user_buffer, size_t size,
             return res; 
         }
     }
-    *offset += size_to_copy;
     if (*offset == bufsize) {
-        *offset = 0;
+        mutex_lock(&counter_mutex);
+        read_pos = 0;
+        mutex_unlock(&counter_mutex);
         up(&buffull_sema);
     }
     return size_to_copy;
 }
 
 static ssize_t my_write(struct file *file, const char __user *user_buffer, size_t size, loff_t *offset) {
+    *offset = write_pos;
     ssize_t size_to_copy = size;
     u64 time = ktime_get_real_ns();
     mutex_lock(&counter_mutex);
@@ -130,7 +136,10 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
         if ((res = down_interruptible(&buffull_sema)) < 0) {
             return res;
         }
+        mutex_lock(&counter_mutex);
+        write_pos = 0;
         *offset = 0;
+        mutex_unlock(&counter_mutex);
         up(&buffull_sema);
     }
     if (bufsize - *offset < size) {
@@ -142,14 +151,16 @@ static ssize_t my_write(struct file *file, const char __user *user_buffer, size_
     mutex_lock(&counter_mutex);
     if (bytes_unread != -1) {
         bytes_unread += size_to_copy;
+        write_pos += size_to_copy;
     }
     mutex_unlock(&counter_mutex);
     if (bytes_unread == size_to_copy) {
         up(&zero_sema);
     }
-    *offset += size_to_copy;
     if (*offset == bufsize && bytes_unread == 0) {
-        *offset = 0;
+        mutex_lock(&counter_mutex);
+        write_pos = 0;
+        mutex_unlock(&counter_mutex);
     } else if (*offset == bufsize) {
         int res;
         if ((res = down_interruptible(&buffull_sema)) < 0) {
