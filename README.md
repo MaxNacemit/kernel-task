@@ -18,20 +18,22 @@ The module creates a character device file after initialization and allocates a 
 This call initializes the device.
 
 # Close
-This call closes the device and signals the process still using the device that the device isn't active now by setting the counter of bytes unread to -1.
+This call closes the device and, if it closes the reader, it also unlocks the semaphore responsible for waiting for data becoming available in the reader's blocking mode.
 
 # Read
 This call has a blocking mode and a non-blocking mode. In both modes, it tries to read the number of bytes equal to the smallest value of:
 - number of bytes to read passed as an argument
 - number of bytes until the end of the buffer
 - number of bytes unread stored in a global variable
-In non-blocking mode, if this value is zero, it returns zero immediately. In non-blocking mode, it waits data appears in the buffer and then returns the number of bytes read.
+
+In non-blocking mode, if this value is zero, it returns zero immediately. In non-blocking mode, it waits until data appears in the buffer and then returns the number of bytes read.
 
 # Write
 This call also has a blocking mode and a non-blocking mode. In both modes, it attempts to write a number of bytes to the buffer equal to the minimum of:
 - the number of bytes left in the buffer
 - the number of bytes passed as an argument
-In non-blocking mode, if this is zero, it returns zero immediately. In blocking mode, the call waits until all data passed to the buffer before has been read and writes the data from the beginning of the buffer.
+
+In non-blocking mode, if this is zero, it returns zero immediately. In blocking mode, the call waits until all data in the buffer is read and writes the necessary number of bytes from the beginning of the buffer.
 
 # IOCTL
 This call has several commands implemented.
