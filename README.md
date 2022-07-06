@@ -18,7 +18,7 @@ The module creates a character device file after initialization and allocates a 
 This call initializes the device.
 
 # Close
-This call closes the device and, if it closes the reader, it also unlocks the semaphore responsible for waiting for data becoming available in the reader's blocking mode.
+This call closes the device and, if it closes the reader, it also unlocks the semaphore responsible for waiting for data becoming available in the reader's blocking mode and resets the bytes_unread counter.
 
 # Read
 This call has a blocking mode and a non-blocking mode. In both modes, it tries to read the number of bytes equal to the smallest value of:
